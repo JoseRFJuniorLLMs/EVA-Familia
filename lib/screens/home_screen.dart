@@ -5,6 +5,9 @@ import '../constants/app_colors.dart';
 
 import '../services/auth_service.dart';
 import 'idoso_agendamentos_screen.dart';
+import 'idoso_list_screen.dart';
+import 'historico_screen.dart';
+import 'settings_screen.dart';
 import 'saude_emocional_screen.dart';
 import 'alertas_screen.dart';
 import 'dashboard_saude_screen.dart';
@@ -165,6 +168,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.people,
+                  title: 'Idosos',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            IdosoListScreen(token: widget.user.accessToken),
+                      ),
+                    );
+                  },
+                ),
+                _buildMenuItem(
+                  icon: Icons.event,
                   title: 'Agendamento',
                   onTap: () {
                     // LOGICA DE FILTRO: Se tiver idoso vinculado, vai direto para o detalhe dele
