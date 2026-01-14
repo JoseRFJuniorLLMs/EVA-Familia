@@ -1,0 +1,368 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000">
+    <defs>
+        <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#E91E63;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#9C27B0;stop-opacity:1" />
+        </linearGradient>
+
+        <filter id="shadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.2" />
+        </filter>
+    </defs>
+
+    <!-- Título -->
+    <text x="700" y="30" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#E91E63"
+        text-anchor="middle">
+        EVA-Familia - Arquitetura de Telas
+    </text>
+
+    <!-- ========== CAMADA DE SERVIÇOS (Backend) ========== -->
+    <g id="services-layer">
+        <rect x="50" y="60" width="1300" height="120" fill="#F3E5F5" stroke="#9C27B0" stroke-width="2" rx="8"
+            filter="url(#shadow)" />
+        <text x="700" y="85" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#9C27B0"
+            text-anchor="middle">
+            Camada de Serviços (Backend API)
+        </text>
+
+        <!-- AuthService -->
+        <rect x="80" y="100" width="150" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="155" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">AuthService</text>
+        <text x="155" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">login(email, senha_hash)</text>
+
+        <!-- AgendamentoService -->
+        <rect x="250" y="100" width="170" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="335" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">AgendamentoService</text>
+        <text x="335" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">getAgendamentos()</text>
+
+        <!-- AlertService -->
+        <rect x="440" y="100" width="150" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="515" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">AlertService</text>
+        <text x="515" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">getAlertas()</text>
+
+        <!-- DashboardService -->
+        <rect x="610" y="100" width="170" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="695" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">DashboardService</text>
+        <text x="695" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">getSaudeData()</text>
+
+        <!-- EmotionalService -->
+        <rect x="800" y="100" width="170" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="885" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">EmotionalService</text>
+        <text x="885" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">getEmotionalData()</text>
+
+        <!-- MedicationService -->
+        <rect x="990" y="100" width="170" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="1075" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">MedicationService</text>
+        <text x="1075" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">getMedicamentos()</text>
+
+        <!-- VideoService -->
+        <rect x="1180" y="100" width="150" height="60" fill="url(#primaryGradient)" rx="6" />
+        <text x="1255" y="125" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">VideoService</text>
+        <text x="1255" y="145" font-family="Arial, sans-serif" font-size="10" fill="white"
+            text-anchor="middle">startCall()</text>
+    </g>
+
+    <!-- ========== TELAS ========== -->
+
+    <!-- LoginScreen -->
+    <g id="login-screen">
+        <rect x="50" y="220" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="50" y="220" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="150" y="245" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">LoginScreen</text>
+
+        <text x="60" y="280" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="60" y="300" font-family="Arial, sans-serif" font-size="10" fill="#666">• Email TextField</text>
+        <text x="60" y="315" font-family="Arial, sans-serif" font-size="10" fill="#666">• Senha TextField</text>
+        <text x="60" y="330" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Entrar</text>
+        <text x="60" y="345" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Face ID</text>
+        <text x="60" y="360" font-family="Arial, sans-serif" font-size="10" fill="#666">• Link Criar Conta</text>
+        <text x="60" y="385" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            AuthService</text>
+    </g>
+
+    <!-- HomeScreen -->
+    <g id="home-screen">
+        <rect x="320" y="220" width="220" height="220" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="320" y="220" width="220" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="430" y="245" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">HomeScreen</text>
+
+        <text x="330" y="280" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="330" y="300" font-family="Arial, sans-serif" font-size="10" fill="#666">• AppBar com Menu</text>
+        <text x="330" y="315" font-family="Arial, sans-serif" font-size="10" fill="#666">• Lista de Idosos</text>
+        <text x="330" y="330" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Agendamentos</text>
+        <text x="330" y="345" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Alertas</text>
+        <text x="330" y="360" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Dashboard</text>
+        <text x="330" y="375" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Saúde Emocional</text>
+        <text x="330" y="390" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Logout</text>
+        <text x="330" y="420" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">Hub
+            Central</text>
+    </g>
+
+    <!-- AgendamentoScreen -->
+    <g id="agendamento-screen">
+        <rect x="600" y="220" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="600" y="220" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="700" y="245" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">AgendamentoScreen</text>
+
+        <text x="610" y="280" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="610" y="300" font-family="Arial, sans-serif" font-size="10" fill="#666">• Lista Agendamentos</text>
+        <text x="610" y="315" font-family="Arial, sans-serif" font-size="10" fill="#666">• Filtros (Status)</text>
+        <text x="610" y="330" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Agendamento</text>
+        <text x="610" y="345" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Novo</text>
+        <text x="610" y="360" font-family="Arial, sans-serif" font-size="10" fill="#666">• Detalhes Modal</text>
+        <text x="610" y="385" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            AgendamentoService</text>
+    </g>
+
+    <!-- AlertasScreen -->
+    <g id="alertas-screen">
+        <rect x="850" y="220" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="850" y="220" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="950" y="245" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">AlertasScreen</text>
+
+        <text x="860" y="280" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="860" y="300" font-family="Arial, sans-serif" font-size="10" fill="#666">• Lista de Alertas</text>
+        <text x="860" y="315" font-family="Arial, sans-serif" font-size="10" fill="#666">• Badge Severidade</text>
+        <text x="860" y="330" font-family="Arial, sans-serif" font-size="10" fill="#666">• Filtro Tipo</text>
+        <text x="860" y="345" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Alerta</text>
+        <text x="860" y="360" font-family="Arial, sans-serif" font-size="10" fill="#666">• Ações Rápidas</text>
+        <text x="860" y="385" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            AlertService</text>
+    </g>
+
+    <!-- DashboardSaudeScreen -->
+    <g id="dashboard-screen">
+        <rect x="1100" y="220" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="1100" y="220" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="1200" y="245" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">DashboardSaúde</text>
+
+        <text x="1110" y="280" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="1110" y="300" font-family="Arial, sans-serif" font-size="10" fill="#666">• Gráficos Vitais</text>
+        <text x="1110" y="315" font-family="Arial, sans-serif" font-size="10" fill="#666">• Card Medicamentos</text>
+        <text x="1110" y="330" font-family="Arial, sans-serif" font-size="10" fill="#666">• Histórico</text>
+        <text x="1110" y="345" font-family="Arial, sans-serif" font-size="10" fill="#666">• Indicadores</text>
+        <text x="1110" y="360" font-family="Arial, sans-serif" font-size="10" fill="#666">• Período Selector</text>
+        <text x="1110" y="385" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            DashboardService</text>
+    </g>
+
+    <!-- SaudeEmocionalScreen -->
+    <g id="emocional-screen">
+        <rect x="320" y="480" width="220" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="320" y="480" width="220" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="430" y="505" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">SaúdeEmocional</text>
+
+        <text x="330" y="540" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="330" y="560" font-family="Arial, sans-serif" font-size="10" fill="#666">• Gráfico Humor</text>
+        <text x="330" y="575" font-family="Arial, sans-serif" font-size="10" fill="#666">• Timeline Eventos</text>
+        <text x="330" y="590" font-family="Arial, sans-serif" font-size="10" fill="#666">• Insights IA</text>
+        <text x="330" y="605" font-family="Arial, sans-serif" font-size="10" fill="#666">• Tópicos Afetivos</text>
+        <text x="330" y="620" font-family="Arial, sans-serif" font-size="10" fill="#666">• Recomendações</text>
+        <text x="330" y="645" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            EmotionalService</text>
+    </g>
+
+    <!-- IdosoAgendamentosScreen -->
+    <g id="idoso-agendamentos-screen">
+        <rect x="600" y="480" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="600" y="480" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="700" y="505" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">IdosoAgendamentos</text>
+
+        <text x="610" y="540" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="610" y="560" font-family="Arial, sans-serif" font-size="10" fill="#666">• Perfil Idoso</text>
+        <text x="610" y="575" font-family="Arial, sans-serif" font-size="10" fill="#666">• Lista Agendamentos</text>
+        <text x="610" y="590" font-family="Arial, sans-serif" font-size="10" fill="#666">• Calendário</text>
+        <text x="610" y="605" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Novo</text>
+        <text x="610" y="620" font-family="Arial, sans-serif" font-size="10" fill="#666">• Status Badges</text>
+        <text x="610" y="645" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            AgendamentoService</text>
+    </g>
+
+    <!-- NovoAgendamentoScreen -->
+    <g id="novo-agendamento-screen">
+        <rect x="850" y="480" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="850" y="480" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="950" y="505" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">NovoAgendamento</text>
+
+        <text x="860" y="540" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="860" y="560" font-family="Arial, sans-serif" font-size="10" fill="#666">• Form Tipo</text>
+        <text x="860" y="575" font-family="Arial, sans-serif" font-size="10" fill="#666">• DateTimePicker</text>
+        <text x="860" y="590" font-family="Arial, sans-serif" font-size="10" fill="#666">• Descrição Field</text>
+        <text x="860" y="605" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Salvar</text>
+        <text x="860" y="620" font-family="Arial, sans-serif" font-size="10" fill="#666">• Validação</text>
+        <text x="860" y="645" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            AgendamentoService</text>
+    </g>
+
+    <!-- VideoCallScreen -->
+    <g id="video-screen">
+        <rect x="1100" y="480" width="200" height="180" fill="white" stroke="#E91E63" stroke-width="3" rx="8"
+            filter="url(#shadow)" />
+        <rect x="1100" y="480" width="200" height="40" fill="url(#primaryGradient)" rx="8 8 0 0" />
+        <text x="1200" y="505" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white"
+            text-anchor="middle">VideoCallScreen</text>
+
+        <text x="1110" y="540" font-family="Arial, sans-serif" font-size="11" fill="#333">Componentes:</text>
+        <text x="1110" y="560" font-family="Arial, sans-serif" font-size="10" fill="#666">• Video Player</text>
+        <text x="1110" y="575" font-family="Arial, sans-serif" font-size="10" fill="#666">• Controles Call</text>
+        <text x="1110" y="590" font-family="Arial, sans-serif" font-size="10" fill="#666">• Mute/Unmute</text>
+        <text x="1110" y="605" font-family="Arial, sans-serif" font-size="10" fill="#666">• Botão Encerrar</text>
+        <text x="1110" y="620" font-family="Arial, sans-serif" font-size="10" fill="#666">• Status Conexão</text>
+        <text x="1110" y="645" font-family="Arial, sans-serif" font-size="9" fill="#9C27B0" font-style="italic">→
+            VideoService</text>
+    </g>
+
+    <!-- ========== NAVEGAÇÃO (Setas) ========== -->
+
+    <!-- Login → Home -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#E91E63" />
+        </marker>
+    </defs>
+
+    <line x1="250" y1="310" x2="320" y2="310" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+    <text x="285" y="305" font-family="Arial, sans-serif" font-size="9" fill="#E91E63">login</text>
+
+    <!-- Home → Agendamento -->
+    <line x1="540" y1="280" x2="600" y2="280" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Home → Alertas -->
+    <line x1="540" y1="310" x2="850" y2="310" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Home → Dashboard -->
+    <line x1="540" y1="340" x2="1100" y2="340" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Home → Saúde Emocional -->
+    <line x1="430" y1="440" x2="430" y2="480" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Home → Idoso Agendamentos -->
+    <line x1="480" y1="440" x2="650" y2="480" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Agendamento → Novo Agendamento -->
+    <line x1="700" y1="400" x2="850" y2="480" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Idoso Agendamentos → Novo Agendamento -->
+    <line x1="800" y1="570" x2="850" y2="570" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+
+    <!-- Alertas → Video Call -->
+    <line x1="1050" y1="310" x2="1100" y2="480" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)"
+        stroke-dasharray="5,5" />
+
+    <!-- ========== LEGENDA ========== -->
+    <g id="legend">
+        <rect x="50" y="720" width="300" height="120" fill="white" stroke="#E91E63" stroke-width="2" rx="8"
+            filter="url(#shadow)" />
+        <text x="200" y="745" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#E91E63"
+            text-anchor="middle">Legenda</text>
+
+        <line x1="70" y1="765" x2="120" y2="765" stroke="#E91E63" stroke-width="2" marker-end="url(#arrowhead)" />
+        <text x="130" y="770" font-family="Arial, sans-serif" font-size="11" fill="#333">Navegação Principal</text>
+
+        <line x1="70" y1="790" x2="120" y2="790" stroke="#E91E63" stroke-width="2" stroke-dasharray="5,5"
+            marker-end="url(#arrowhead)" />
+        <text x="130" y="795" font-family="Arial, sans-serif" font-size="11" fill="#333">Navegação Condicional</text>
+
+        <rect x="70" y="805" width="50" height="20" fill="url(#primaryGradient)" rx="3" />
+        <text x="130" y="820" font-family="Arial, sans-serif" font-size="11" fill="#333">Serviço Backend</text>
+    </g>
+
+    <!-- ========== MODELOS DE DADOS ========== -->
+    <g id="models">
+        <rect x="400" y="720" width="900" height="250" fill="#FFF3E0" stroke="#FF9800" stroke-width="2" rx="8"
+            filter="url(#shadow)" />
+        <text x="850" y="745" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FF9800"
+            text-anchor="middle">Modelos de Dados</text>
+
+        <!-- Usuario -->
+        <rect x="420" y="760" width="160" height="180" fill="white" stroke="#FF9800" stroke-width="2" rx="6" />
+        <rect x="420" y="760" width="160" height="30" fill="#FF9800" rx="6 6 0 0" />
+        <text x="500" y="780" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">Usuario</text>
+        <text x="430" y="805" font-family="Arial, sans-serif" font-size="10" fill="#333">• id: String</text>
+        <text x="430" y="820" font-family="Arial, sans-serif" font-size="10" fill="#333">• name: String</text>
+        <text x="430" y="835" font-family="Arial, sans-serif" font-size="10" fill="#333">• email: String</text>
+        <text x="430" y="850" font-family="Arial, sans-serif" font-size="10" fill="#333">• role: String</text>
+        <text x="430" y="865" font-family="Arial, sans-serif" font-size="10" fill="#333">• linkedIdosoId: String?</text>
+        <text x="430" y="880" font-family="Arial, sans-serif" font-size="10" fill="#333">• accessToken: String?</text>
+        <text x="430" y="920" font-family="Arial, sans-serif" font-size="9" fill="#FF9800"
+            font-style="italic">senha_hash no backend</text>
+
+        <!-- Agendamento -->
+        <rect x="600" y="760" width="160" height="180" fill="white" stroke="#FF9800" stroke-width="2" rx="6" />
+        <rect x="600" y="760" width="160" height="30" fill="#FF9800" rx="6 6 0 0" />
+        <text x="680" y="780" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">Agendamento</text>
+        <text x="610" y="805" font-family="Arial, sans-serif" font-size="10" fill="#333">• id: int</text>
+        <text x="610" y="820" font-family="Arial, sans-serif" font-size="10" fill="#333">• idoso_id: int</text>
+        <text x="610" y="835" font-family="Arial, sans-serif" font-size="10" fill="#333">• tipo: String</text>
+        <text x="610" y="850" font-family="Arial, sans-serif" font-size="10" fill="#333">• data_hora: DateTime</text>
+        <text x="610" y="865" font-family="Arial, sans-serif" font-size="10" fill="#333">• status: String</text>
+        <text x="610" y="880" font-family="Arial, sans-serif" font-size="10" fill="#333">• dados_tarefa: JSON</text>
+
+        <!-- Alerta -->
+        <rect x="780" y="760" width="160" height="180" fill="white" stroke="#FF9800" stroke-width="2" rx="6" />
+        <rect x="780" y="760" width="160" height="30" fill="#FF9800" rx="6 6 0 0" />
+        <text x="860" y="780" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">Alerta</text>
+        <text x="790" y="805" font-family="Arial, sans-serif" font-size="10" fill="#333">• id: int</text>
+        <text x="790" y="820" font-family="Arial, sans-serif" font-size="10" fill="#333">• idoso_id: int</text>
+        <text x="790" y="835" font-family="Arial, sans-serif" font-size="10" fill="#333">• tipo: String</text>
+        <text x="790" y="850" font-family="Arial, sans-serif" font-size="10" fill="#333">• severidade: String</text>
+        <text x="790" y="865" font-family="Arial, sans-serif" font-size="10" fill="#333">• mensagem: String</text>
+        <text x="790" y="880" font-family="Arial, sans-serif" font-size="10" fill="#333">• enviado: bool</text>
+
+        <!-- Idoso -->
+        <rect x="960" y="760" width="160" height="180" fill="white" stroke="#FF9800" stroke-width="2" rx="6" />
+        <rect x="960" y="760" width="160" height="30" fill="#FF9800" rx="6 6 0 0" />
+        <text x="1040" y="780" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">Idoso</text>
+        <text x="970" y="805" font-family="Arial, sans-serif" font-size="10" fill="#333">• id: int</text>
+        <text x="970" y="820" font-family="Arial, sans-serif" font-size="10" fill="#333">• nome: String</text>
+        <text x="970" y="835" font-family="Arial, sans-serif" font-size="10" fill="#333">• cpf: String</text>
+        <text x="970" y="850" font-family="Arial, sans-serif" font-size="10" fill="#333">• telefone: String</text>
+        <text x="970" y="865" font-family="Arial, sans-serif" font-size="10" fill="#333">• nivel_cognitivo:
+            String</text>
+        <text x="970" y="880" font-family="Arial, sans-serif" font-size="10" fill="#333">• device_token: String?</text>
+
+        <!-- SinaisVitais -->
+        <rect x="1140" y="760" width="140" height="180" fill="white" stroke="#FF9800" stroke-width="2" rx="6" />
+        <rect x="1140" y="760" width="140" height="30" fill="#FF9800" rx="6 6 0 0" />
+        <text x="1210" y="780" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white"
+            text-anchor="middle">SinaisVitais</text>
+        <text x="1150" y="805" font-family="Arial, sans-serif" font-size="10" fill="#333">• id: int</text>
+        <text x="1150" y="820" font-family="Arial, sans-serif" font-size="10" fill="#333">• idoso_id: int</text>
+        <text x="1150" y="835" font-family="Arial, sans-serif" font-size="10" fill="#333">• tipo: String</text>
+        <text x="1150" y="850" font-family="Arial, sans-serif" font-size="10" fill="#333">• valor: String</text>
+        <text x="1150" y="865" font-family="Arial, sans-serif" font-size="10" fill="#333">• data: DateTime</text>
+    </g>
+</svg>

@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'agendamento_screen.dart';
 import '../models/agendamento.dart';
+import '../constants/app_colors.dart';
+
+import '../services/auth_service.dart';
+import 'idoso_agendamentos_screen.dart';
+import 'saude_emocional_screen.dart';
+import 'alertas_screen.dart';
+import 'dashboard_saude_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Usuario user;
+  const HomeScreen({super.key, required this.user});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -49,7 +57,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF424242), // Cinza escuro
+      backgroundColor: const Color(
+        0xFF424242,
+      ), // TODO: Considerar mudar para tema dark oficial
       appBar: AppBar(
         backgroundColor: const Color(0xFF424242),
         elevation: 0,
@@ -63,7 +73,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: CircleAvatar(
-              backgroundColor: const Color(0xFFFFB6C1), // Rosa claro
+              backgroundColor: AppColors.primary.withValues(
+                alpha: 0.3,
+              ), // Rosa claro
               radius: 18,
               child: const Text(
                 'JF',
@@ -107,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF87CEEB), // Azul claro
+                    color: AppColors.secondary, // Azul claro
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -123,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const Divider(height: 1),
-          
+
           // Menu Principal
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -140,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          
+
           // Itens do Menu
           Expanded(
             child: ListView(
@@ -155,12 +167,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.people,
                   title: 'Agendamento',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AgendamentoScreen(),
-                      ),
-                    );
+                    // LOGICA DE FILTRO: Se tiver idoso vinculado, vai direto para o detalhe dele
+                    if (widget.user.linkedIdosoId != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => IdosoAgendamentosScreen(
+                            idosoId: widget.user.linkedIdosoId!,
+                            idosoNome:
+                                'Berna Camargo', // TODO: Pegar nome real do backend
+                            token: widget.user.accessToken,
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Se for admin ou cuidador geral, vê a lista completa
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AgendamentoScreen(token: widget.user.accessToken),
+                        ),
+                      );
+                    }
                   },
                 ),
                 _buildMenuItem(
@@ -190,6 +219,54 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => _selectMenuItem('Notificações'),
                 ),
                 _buildMenuItem(
+                  icon: Icons.health_and_safety,
+                  title: 'Dashboard de Saúde',
+                  onTap: () {
+                    if (widget.user.linkedIdosoId != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DashboardSaudeScreen(
+                            idosoId: widget.user.linkedIdosoId!,
+                            idosoNome: 'Berna Camargo', // TODO: Pegar nome real
+                            token: widget.user.accessToken,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildMenuItem(
+                  icon: Icons.psychology,
+                  title: 'Psicologia Digital',
+                  onTap: () {
+                    if (widget.user.linkedIdosoId != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SaudeEmocionalScreen(
+                            idosoId: widget.user.linkedIdosoId!,
+                            token: widget.user.accessToken,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildMenuItem(
+                  icon: Icons.notifications_active, // Icone distinto
+                  title: 'Gestão de Alertas',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AlertasScreen(token: widget.user.accessToken),
+                      ),
+                    );
+                  },
+                ),
+                _buildMenuItem(
                   icon: Icons.description,
                   title: 'Relatórios',
                   onTap: () => _selectMenuItem('Relatórios'),
@@ -202,9 +279,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          
+
           const Divider(height: 1),
-          
+
           // Informações do Usuário
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -214,8 +291,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'tiago',
+                    Text(
+                      widget.user.name,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -224,10 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     Text(
                       'Demo · Familiar',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -249,11 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildColoredLetter(String letter, Color color) {
     return Text(
       letter,
-      style: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: color,
-      ),
+      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
     );
   }
 
@@ -266,12 +336,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? const Color(0xFF87CEEB) : Colors.grey[700],
+        color: isSelected ? AppColors.secondary : Colors.grey[700],
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? const Color(0xFF87CEEB) : Colors.black87,
+          color: isSelected ? AppColors.secondary : Colors.black87,
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
@@ -296,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
             _getIconForMenuItem(_selectedMenuItem),
             size: 64,
-            color: const Color(0xFFE91E63),
+            color: AppColors.primary,
           ),
           const SizedBox(height: 16),
           Text(
@@ -310,10 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 8),
           Text(
             'Conteúdo da tela $_selectedMenuItem',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[400],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[400]),
           ),
         ],
       ),
@@ -348,7 +415,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   runSpacing: 16,
                   children: [
                     SizedBox(
-                      width: isWide ? (constraints.maxWidth / 3) - 12 : constraints.maxWidth,
+                      width: isWide
+                          ? (constraints.maxWidth / 3) - 12
+                          : constraints.maxWidth,
                       child: _buildStatCard(
                         'Idosos Cadastrados',
                         '0',
@@ -357,7 +426,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     SizedBox(
-                      width: isWide ? (constraints.maxWidth / 3) - 12 : constraints.maxWidth,
+                      width: isWide
+                          ? (constraints.maxWidth / 3) - 12
+                          : constraints.maxWidth,
                       child: _buildStatCard(
                         'Agendamentos Hoje',
                         '${_ultimosAgendamentos.length}',
@@ -366,7 +437,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     SizedBox(
-                      width: isWide ? (constraints.maxWidth / 3) - 12 : constraints.maxWidth,
+                      width: isWide
+                          ? (constraints.maxWidth / 3) - 12
+                          : constraints.maxWidth,
                       child: _buildStatCard(
                         'Alertas Ativos',
                         '10',
@@ -394,7 +467,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
@@ -433,11 +511,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          Icon(
-            icon,
-            size: 48,
-            color: color.withValues(alpha: 0.3),
-          ),
+          Icon(icon, size: 48, color: color.withValues(alpha: 0.3)),
         ],
       ),
     );
@@ -453,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.people, color: const Color(0xFFE91E63), size: 28),
+                Icon(Icons.people, color: AppColors.primary, size: 28),
                 const SizedBox(width: 12),
                 const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,10 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: 4),
                     Text(
                       'Resumo do humor detectado pela EVA nas últimas 24h',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -484,9 +555,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver Análise da Psicóloga'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFE91E63),
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ],
         ),
@@ -496,7 +565,9 @@ class _HomeScreenState extends State<HomeScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 800;
-            final cardWidth = isWide ? (constraints.maxWidth / 4) - 12 : constraints.maxWidth;
+            final cardWidth = isWide
+                ? (constraints.maxWidth / 4) - 12
+                : constraints.maxWidth;
             return Wrap(
               spacing: 16,
               runSpacing: 16,
@@ -572,10 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 48),
-            ),
+            Text(emoji, style: const TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
             Text(
               value,
@@ -627,10 +695,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: 4),
                     Text(
                       'Capturados na última conversa do idoso',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -642,9 +707,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('GERENCIAR SAÚDE'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.green[600],
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.green[600]),
             ),
           ],
         ),
@@ -654,7 +717,9 @@ class _HomeScreenState extends State<HomeScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 800;
-            final cardWidth = isWide ? (constraints.maxWidth / 3) - 12 : constraints.maxWidth;
+            final cardWidth = isWide
+                ? (constraints.maxWidth / 3) - 12
+                : constraints.maxWidth;
             return Wrap(
               spacing: 16,
               runSpacing: 16,
@@ -791,6 +856,3 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 }
-
-
-

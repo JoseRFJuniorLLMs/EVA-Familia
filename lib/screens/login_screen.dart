@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import '../constants/app_colors.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,36 +12,75 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _senhaHashController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
-  final FocusNode _passwordFocusNode = FocusNode();
+  final FocusNode _senhaHashFocusNode = FocusNode();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _emailController.text = 'coralineximenes@gmail.com';
+    // Verificamos login automático ao iniciar
+    _checkAutoLogin();
+  }
+
+  Future<void> _checkAutoLogin() async {
+    final user = await AuthService.tryAutoLogin();
+    if (user != null && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
+      );
+    }
   }
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
+    _senhaHashController.dispose();
     _emailFocusNode.dispose();
-    _passwordFocusNode.dispose();
+    _senhaHashFocusNode.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
-    // TODO: Implementar lógica de login aqui
-    // Email: _emailController.text
-    // Password: _passwordController.text
-    
-    // Navegar para a tela inicial
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      ),
-    );
+  Future<void> _handleLogin() async {
+    final email = _emailController.text;
+    final senhaHash = _senhaHashController.text;
+
+    if (email.isEmpty || senhaHash.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha email e senha.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await AuthService.login(email, senhaHash);
+
+      if (mounted) {
+        if (user != null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Login falhou. Verifique suas credenciais.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _handleFaceIdLogin() {
@@ -69,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFE91E63), // Rosa-magenta
+                    color: AppColors.primary, // Rosa-magenta
                   ),
                 ),
                 const SizedBox(height: 48),
@@ -91,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _emailController,
                       focusNode: _emailFocusNode,
                       keyboardType: TextInputType.emailAddress,
+                      enabled: !_isLoading,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFE3F2FD), // Azul claro
@@ -98,7 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
                             color: _emailFocusNode.hasFocus
-                                ? const Color(0xFFE91E63) // Rosa quando focado
+                                ? AppColors
+                                      .primary // Rosa quando focado
                                 : Colors.transparent,
                             width: 1.5,
                           ),
@@ -107,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
                             color: _emailFocusNode.hasFocus
-                                ? const Color(0xFFE91E63)
+                                ? AppColors.primary
                                 : Colors.transparent,
                             width: 1.5,
                           ),
@@ -115,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFE91E63),
+                            color: AppColors.primary,
                             width: 1.5,
                           ),
                         ),
@@ -124,10 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           vertical: 16,
                         ),
                       ),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                      ),
+                      style: const TextStyle(fontSize: 16, color: Colors.black),
                     ),
                   ],
                 ),
@@ -147,17 +187,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
-                      controller: _passwordController,
-                      focusNode: _passwordFocusNode,
+                      controller: _senhaHashController,
+                      focusNode: _senhaHashFocusNode,
                       obscureText: true,
+                      enabled: !_isLoading,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFE3F2FD), // Azul claro
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: _passwordFocusNode.hasFocus
-                                ? const Color(0xFFE91E63)
+                            color: _senhaHashFocusNode.hasFocus
+                                ? AppColors.primary
                                 : Colors.transparent,
                             width: 1.5,
                           ),
@@ -166,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
                             color: _passwordFocusNode.hasFocus
-                                ? const Color(0xFFE91E63)
+                                ? AppColors.primary
                                 : Colors.transparent,
                             width: 1.5,
                           ),
@@ -174,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFE91E63),
+                            color: AppColors.primary,
                             width: 1.5,
                           ),
                         ),
@@ -183,10 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           vertical: 16,
                         ),
                       ),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                      ),
+                      style: const TextStyle(fontSize: 16, color: Colors.black),
                     ),
                   ],
                 ),
@@ -199,15 +237,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(12),
                     gradient: const LinearGradient(
                       colors: [
-                        Color(0xFFE91E63), // Rosa
-                        Color(0xFF9C27B0), // Roxo
+                        AppColors.primary, // Rosa
+                        AppColors.tertiary, // Roxo
                       ],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
                   ),
                   child: ElevatedButton(
-                    onPressed: _handleLogin,
+                    onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -215,14 +253,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Entrar',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Entrar',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -231,26 +271,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Divider(
-                        color: Colors.grey[300],
-                        thickness: 1,
-                      ),
+                      child: Divider(color: Colors.grey[300], thickness: 1),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'ou',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                       ),
                     ),
                     Expanded(
-                      child: Divider(
-                        color: Colors.grey[300],
-                        thickness: 1,
-                      ),
+                      child: Divider(color: Colors.grey[300], thickness: 1),
                     ),
                   ],
                 ),
@@ -262,10 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
-                    ),
+                    border: Border.all(color: Colors.grey[300]!, width: 1),
                   ),
                   child: ElevatedButton(
                     onPressed: _handleFaceIdLogin,
@@ -305,10 +333,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       'Não tem uma conta? ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     ),
                     GestureDetector(
                       onTap: _navigateToSignUp,
@@ -317,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFE91E63), // Rosa-magenta
+                          color: AppColors.primary, // Rosa-magenta
                         ),
                       ),
                     ),
@@ -331,4 +356,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

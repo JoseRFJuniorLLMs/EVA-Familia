@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
+import 'constants/app_colors.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,8 +14,16 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'EVA Portal da Familia',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE91E63)),
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          tertiary: AppColors.tertiary,
+          surface: AppColors.surface,
+          background: AppColors.background,
+        ),
+        scaffoldBackgroundColor: AppColors.background,
       ),
       home: const LoginScreen(),
       debugShowCheckedModeBanner: false,

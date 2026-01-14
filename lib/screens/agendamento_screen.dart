@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/agendamento.dart';
 import 'idoso_agendamentos_screen.dart';
+import '../constants/app_colors.dart';
+
+import '../services/agendamento_service.dart';
 
 class AgendamentoScreen extends StatefulWidget {
-  const AgendamentoScreen({super.key});
+  final String? token;
+  const AgendamentoScreen({super.key, this.token});
 
   @override
   State<AgendamentoScreen> createState() => _AgendamentoScreenState();
@@ -11,44 +15,46 @@ class AgendamentoScreen extends StatefulWidget {
 
 class _AgendamentoScreenState extends State<AgendamentoScreen> {
   String _selectedIdosoId = '';
-  String _viewMode = 'Lista'; // Lista ou Painel
   final String _statusFilter = 'TODOS STATUS';
   final TextEditingController _searchController = TextEditingController();
-  DateTime _selectedDate = DateTime(2026, 1, 5);
-  DateTime _currentMonth = DateTime(2026, 1);
+  DateTime _selectedDate = DateTime.now();
+  DateTime _currentMonth = DateTime.now();
 
-  // Dados mockados
-  final List<Idoso> _idosos = [
-    Idoso(
-      id: '1',
-      nome: 'Sra. Alexia Castro',
-      documento: '02934785114',
-    ),
-    Idoso(
-      id: '2',
-      nome: 'Luiz Felipe Barbosa',
-      documento: '02934785115',
-    ),
-    Idoso(
-      id: '3',
-      nome: 'Alana Cirino',
-      documento: '02934785116',
-    ),
-  ];
+  List<Idoso> _idosos = [];
+  List<Agendamento> _agendamentos = [];
+  bool _isLoading = true;
 
-  final List<Agendamento> _agendamentos = [
-    Agendamento(
-      id: '1',
-      nome: 'Nietzsche',
-      telefone: '(99) 93566-8814',
-      dataHora: DateTime(2026, 1, 5, 2, 43),
-      tipo: 'LEMBRETE_MEDICAMENTO',
-      descricao: 'MONITORAMENTO GERAL',
-      status: 'NAO_ATENDIDO',
-      tentativas: 1,
-      idosoId: '1',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final agendamentos = await AgendamentoService.getAgendamentos(
+      token: widget.token,
+    );
+
+    // Extract unique idosos from agendamentos
+    final Map<String, Idoso> idososMap = {};
+    for (var a in agendamentos) {
+      if (a.idosoId != null && !idososMap.containsKey(a.idosoId)) {
+        idososMap[a.idosoId!] = Idoso(
+          id: a.idosoId!,
+          nome: a.nome,
+          documento: '', // Não temos documento no Agendamento, mas ok por agora
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _agendamentos = agendamentos;
+        _idosos = idososMap.values.toList();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -60,253 +66,259 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Row(
-        children: [
-          // Sidebar Esquerda - Nexus de Cuidado
-          Container(
-            width: 400,
-            color: Colors.white,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Row(
               children: [
-                // Título
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: const Text(
-                    'Nexus de Cuidado',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Campo de Busca
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Buscar Idoso no Nexus...',
-                        prefixIcon: Icon(Icons.search, color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                      ),
-                      onChanged: (value) {
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Lista de Idosos
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    itemCount: _idosos.length,
-                    itemBuilder: (context, index) {
-                      final idoso = _idosos[index];
-                      final isSelected = _selectedIdosoId == idoso.id;
-                      return InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => IdosoAgendamentosScreen(
-                                idosoId: idoso.id,
-                                idosoNome: idoso.nome,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFFE3F2FD)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: isSelected
-                                ? Border.all(color: const Color(0xFF87CEEB))
-                                : null,
+                // Sidebar Esquerda - Nexus de Cuidado
+                Container(
+                  width: 400,
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Título
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: const Text(
+                          'Nexus de Cuidado',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Colors.grey[300],
-                                child: Text(
-                                  idoso.nome.split(' ').length > 1
-                                      ? '${idoso.nome.split(' ')[0][0]}${idoso.nome.split(' ')[1][0]}'
-                                      : idoso.nome[0],
-                                  style: const TextStyle(
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Campo de Busca
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              hintText: 'Buscar Idoso no Nexus...',
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: Colors.grey,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.all(16),
+                            ),
+                            onChanged: (value) {
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Lista de Idosos
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          itemCount: _idosos.length,
+                          itemBuilder: (context, index) {
+                            final idoso = _idosos[index];
+                            final isSelected = _selectedIdosoId == idoso.id;
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        IdosoAgendamentosScreen(
+                                          idosoId: idoso.id,
+                                          idosoNome: idoso.nome,
+                                          token: widget.token,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(
+                                          0xFFE3F2FD,
+                                        ) // Pode ser AppColors.secondary.withOpacity(0.1) se preferir
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: isSelected
+                                      ? Border.all(color: AppColors.secondary)
+                                      : null,
+                                ),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      idoso.nome,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor: Colors.grey[300],
+                                      child: Text(
+                                        idoso.nome.split(' ').length > 1
+                                            ? '${idoso.nome.split(' ')[0][0]}${idoso.nome.split(' ')[1][0]}'
+                                            : idoso.nome[0],
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                    Text(
-                                      idoso.documento,
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            idoso.nome,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          Text(
+                                            idoso.documento,
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.grey[400],
                                     ),
                                   ],
                                 ),
                               ),
-                              Icon(
-                                Icons.chevron_right,
-                                color: Colors.grey[400],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Área Principal - Calendário e Dashboard
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        // Header do Calendário
+                        Container(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    _getMonthName(_currentMonth.month),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    '2026',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary, // Rosa
+                                    ),
+                                  ),
+                                  const SizedBox(width: 24),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.favorite,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'JANELA: 0',
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left),
+                                    onPressed: () {
+                                      setState(() {
+                                        _currentMonth = DateTime(
+                                          _currentMonth.year,
+                                          _currentMonth.month - 1,
+                                        );
+                                      });
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    onPressed: () {
+                                      setState(() {
+                                        _currentMonth = DateTime(
+                                          _currentMonth.year,
+                                          _currentMonth.month + 1,
+                                        );
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
 
-          // Área Principal - Calendário e Dashboard
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Header do Calendário
-                  Container(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              _getMonthName(_currentMonth.month),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              '2026',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE91E63), // Rosa
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Row(
+                        // Calendário
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
                               children: [
-                                const Icon(
-                                  Icons.favorite,
-                                  color: Color(0xFFE91E63),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'JANELA: 0',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 14,
-                                  ),
-                                ),
+                                _buildCalendar(),
+                                const SizedBox(height: 32),
+                                _buildDashboard(),
                               ],
                             ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.chevron_left),
-                              onPressed: () {
-                                setState(() {
-                                  _currentMonth = DateTime(
-                                    _currentMonth.year,
-                                    _currentMonth.month - 1,
-                                  );
-                                });
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_right),
-                              onPressed: () {
-                                setState(() {
-                                  _currentMonth = DateTime(
-                                    _currentMonth.year,
-                                    _currentMonth.month + 1,
-                                  );
-                                });
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-
-                  // Calendário
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          _buildCalendar(),
-                          const SizedBox(height: 32),
-                          _buildDashboard(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildCalendar() {
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final lastDay = DateTime(
-      _currentMonth.year,
-      _currentMonth.month + 1,
-      0,
-    );
+    final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
     final firstWeekday = firstDay.weekday;
 
     return Container(
@@ -323,18 +335,20 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
-                .map((day) => Expanded(
-                      child: Center(
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
-                            fontSize: 12,
-                          ),
+                .map(
+                  (day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                          fontSize: 12,
                         ),
                       ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 16),
@@ -354,8 +368,13 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
               if (day < 1 || day > lastDay.day) {
                 return const SizedBox();
               }
-              final date = DateTime(_currentMonth.year, _currentMonth.month, day);
-              final isSelected = date.day == _selectedDate.day &&
+              final date = DateTime(
+                _currentMonth.year,
+                _currentMonth.month,
+                day,
+              );
+              final isSelected =
+                  date.day == _selectedDate.day &&
                   date.month == _selectedDate.month &&
                   date.year == _selectedDate.year;
 
@@ -367,9 +386,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFFE91E63)
-                        : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -377,7 +394,9 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                       '$day',
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -395,8 +414,12 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
     final pendentes = _agendamentos
         .where((a) => a.status == 'PENDENTE' || a.status == 'NAO_ATENDIDO')
         .length;
-    final concluidos = _agendamentos.where((a) => a.status == 'CONCLUIDO').length;
-    final altaPrioridade = _agendamentos.where((a) => a.status == 'NAO_ATENDIDO').length;
+    final concluidos = _agendamentos
+        .where((a) => a.status == 'CONCLUIDO')
+        .length;
+    final altaPrioridade = _agendamentos
+        .where((a) => a.status == 'NAO_ATENDIDO')
+        .length;
 
     return Container(
       margin: const EdgeInsets.all(24.0),
@@ -410,7 +433,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                 child: _buildSummaryCard(
                   'FLUXO TOTAL',
                   '$totalFluxo',
-                  const Color(0xFFE91E63),
+                  AppColors.primary,
                   Icons.bolt,
                 ),
               ),
@@ -484,7 +507,10 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
               const SizedBox(width: 16),
               // Dropdown Status
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
@@ -507,7 +533,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                 icon: const Icon(Icons.calendar_today),
                 label: const Text('NOVO NEXUS'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE91E63),
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -524,7 +550,9 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
           const SizedBox(height: 24),
 
           // Lista de Agendamentos
-          ..._agendamentos.map((agendamento) => _buildAgendamentoCard(agendamento)),
+          ..._agendamentos.map(
+            (agendamento) => _buildAgendamentoCard(agendamento),
+          ),
         ],
       ),
     );
@@ -576,14 +604,12 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
   Widget _buildViewToggleButton(String label, IconData icon, bool isSelected) {
     return InkWell(
       onTap: () {
-        setState(() {
-          _viewMode = label;
-        });
+        // View mode toggle removed - not currently used
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE91E63) : Colors.transparent,
+          color: isSelected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -620,7 +646,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             width: 4,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFE91E63),
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -649,10 +675,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
               ),
               Text(
                 '${agendamento.dataHora.day.toString().padLeft(2, '0')} DE ${_getMonthName(agendamento.dataHora.month).substring(0, 3).toUpperCase()}.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -680,7 +703,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFE91E63),
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -711,17 +734,14 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '${agendamento.tipo} - ${agendamento.descricao}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   agendamento.telefone,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Color(0xFFE91E63),
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -750,10 +770,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'TENTATIVAS: ${agendamento.tentativas}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.red[600],
-                  ),
+                  style: TextStyle(fontSize: 10, color: Colors.red[600]),
                 ),
               ],
             ),
@@ -776,9 +793,8 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       'Setembro',
       'Outubro',
       'Novembro',
-      'Dezembro'
+      'Dezembro',
     ];
     return months[month - 1];
   }
 }
-

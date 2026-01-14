@@ -1,61 +1,52 @@
 import 'package:flutter/material.dart';
 import '../models/agendamento.dart';
 import 'novo_agendamento_screen.dart';
+import '../constants/app_colors.dart';
+import 'video_call_screen.dart';
+
+import '../services/agendamento_service.dart';
 
 class IdosoAgendamentosScreen extends StatefulWidget {
   final String idosoId;
   final String idosoNome;
+  final String? token;
 
   const IdosoAgendamentosScreen({
     super.key,
     required this.idosoId,
     required this.idosoNome,
+    this.token,
   });
 
   @override
-  State<IdosoAgendamentosScreen> createState() => _IdosoAgendamentosScreenState();
+  State<IdosoAgendamentosScreen> createState() =>
+      _IdosoAgendamentosScreenState();
 }
 
 class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
   String _viewMode = 'Lista';
   final TextEditingController _searchController = TextEditingController();
-  
-  // Agendamentos mockados
-  final List<Agendamento> _agendamentos = [
-    Agendamento(
-      id: '1',
-      nome: 'Berna Camargo',
-      telefone: '(19) 99629-7438',
-      dataHora: DateTime(2026, 1, 14, 21, 26),
-      tipo: 'LEMBRETE_MEDICAMENTO',
-      descricao: 'MONITORAMENTO GERAL',
-      status: 'AGENDADO',
-      tentativas: 0,
-      idosoId: '1',
-    ),
-    Agendamento(
-      id: '2',
-      nome: 'Berna Camargo',
-      telefone: '(19) 99629-7438',
-      dataHora: DateTime(2026, 1, 15, 10, 0),
-      tipo: 'LEMBRETE_MEDICAMENTO',
-      descricao: 'MONITORAMENTO GERAL',
-      status: 'AGENDADO',
-      tentativas: 0,
-      idosoId: '1',
-    ),
-    Agendamento(
-      id: '3',
-      nome: 'Berna Camargo',
-      telefone: '(19) 99629-7438',
-      dataHora: DateTime(2026, 1, 16, 14, 30),
-      tipo: 'LEMBRETE_MEDICAMENTO',
-      descricao: 'MONITORAMENTO GERAL',
-      status: 'AGENDADO',
-      tentativas: 0,
-      idosoId: '1',
-    ),
-  ];
+  List<Agendamento> _agendamentos = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAgendamentos();
+  }
+
+  Future<void> _loadAgendamentos() async {
+    final dados = await AgendamentoService.getAgendamentos(
+      idosoId: widget.idosoId,
+      token: widget.token,
+    );
+    if (mounted) {
+      setState(() {
+        _agendamentos = dados;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -66,9 +57,15 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
   @override
   Widget build(BuildContext context) {
     final totalFluxo = _agendamentos.length;
-    final pendentes = _agendamentos.where((a) => a.status == 'AGENDADO' || a.status == 'PENDENTE').length;
-    final concluidos = _agendamentos.where((a) => a.status == 'CONCLUIDO').length;
-    final altaPrioridade = _agendamentos.where((a) => a.status == 'NAO_ATENDIDO').length;
+    final pendentes = _agendamentos
+        .where((a) => a.status == 'AGENDADO' || a.status == 'PENDENTE')
+        .length;
+    final concluidos = _agendamentos
+        .where((a) => a.status == 'CONCLUIDO')
+        .length;
+    final altaPrioridade = _agendamentos
+        .where((a) => a.status == 'NAO_ATENDIDO')
+        .length;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -86,6 +83,25 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.videocam, color: AppColors.primary),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VideoCallScreen(
+                    idosoId: widget.idosoId,
+                    idosoNome: widget.idosoNome,
+                    isIncoming: false, // Fazendo a chamada
+                    token: widget.token,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -106,7 +122,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                         'FLUXO TOTAL',
                         '$totalFluxo',
                         Colors.black87,
-                        const Color(0xFFE91E63),
+                        AppColors.primary,
                       ),
                     ),
                     SizedBox(
@@ -175,10 +191,18 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: _buildViewToggleButton('Lista', Icons.list, _viewMode == 'Lista'),
+                          child: _buildViewToggleButton(
+                            'Lista',
+                            Icons.list,
+                            _viewMode == 'Lista',
+                          ),
                         ),
                         Expanded(
-                          child: _buildViewToggleButton('Painel', Icons.dashboard, _viewMode == 'Painel'),
+                          child: _buildViewToggleButton(
+                            'Painel',
+                            Icons.dashboard,
+                            _viewMode == 'Painel',
+                          ),
                         ),
                       ],
                     ),
@@ -187,7 +211,10 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                 const SizedBox(width: 12),
                 // Dropdown Status
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12),
@@ -210,7 +237,9 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
             const SizedBox(height: 24),
 
             // Lista de Agendamentos
-            ..._agendamentos.map((agendamento) => _buildAgendamentoCard(agendamento)),
+            ..._agendamentos.map(
+              (agendamento) => _buildAgendamentoCard(agendamento),
+            ),
           ],
         ),
       ),
@@ -222,11 +251,12 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
               builder: (context) => NovoAgendamentoScreen(
                 idosoId: widget.idosoId,
                 idosoNome: widget.idosoNome,
+                token: widget.token,
               ),
             ),
           );
         },
-        backgroundColor: const Color(0xFFE91E63),
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -269,11 +299,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                 ),
               ),
               if (title == 'FLUXO TOTAL')
-                const Icon(
-                  Icons.bolt,
-                  color: Color(0xFFE91E63),
-                  size: 18,
-                ),
+                const Icon(Icons.bolt, color: Color(0xFFE91E63), size: 18),
             ],
           ),
           const SizedBox(height: 8),
@@ -300,7 +326,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE91E63) : Colors.transparent,
+          color: isSelected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -347,7 +373,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
           Container(
             width: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFE91E63),
+              color: AppColors.primary,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 bottomLeft: Radius.circular(12),
@@ -422,7 +448,10 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                       const Spacer(),
                       // Status
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.orange[50],
                           borderRadius: BorderRadius.circular(20),
@@ -453,19 +482,19 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                   // Tipo e Descrição
                   Text(
                     '${agendamento.tipo} • ${agendamento.descricao}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 12),
                   // Telefone e Ações
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE91E63).withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -491,10 +520,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                       const Spacer(),
                       Text(
                         'TENTATIVAS: ${agendamento.tentativas}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -508,7 +534,10 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                             // TODO: Implementar ação de Voz IA
                           },
                           icon: const Icon(Icons.smart_toy, size: 14),
-                          label: const Text('VOZ IA', style: TextStyle(fontSize: 12)),
+                          label: const Text(
+                            'VOZ IA',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange[50],
                             foregroundColor: Colors.orange[700],
@@ -527,7 +556,10 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                             // TODO: Implementar ação de cancelar
                           },
                           icon: const Icon(Icons.delete_outline, size: 14),
-                          label: const Text('CANCELAR', style: TextStyle(fontSize: 12)),
+                          label: const Text(
+                            'CANCELAR',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red[50],
                             foregroundColor: Colors.red[700],
@@ -563,7 +595,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
       'Setembro',
       'Outubro',
       'Novembro',
-      'Dezembro'
+      'Dezembro',
     ];
     return months[month - 1];
   }

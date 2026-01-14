@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
+import '../services/medication_service.dart';
+import '../services/agendamento_service.dart';
+import '../models/agendamento.dart';
 
 class NovoAgendamentoScreen extends StatefulWidget {
   final String? idosoId;
   final String? idosoNome;
+  final String? token;
 
   const NovoAgendamentoScreen({
     super.key,
     this.idosoId,
     this.idosoNome,
+    this.token,
   });
 
   @override
   State<NovoAgendamentoScreen> createState() => _NovoAgendamentoScreenState();
 }
+
+// ... (in _NovoAgendamentoScreenState class)
 
 class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
   DateTime _selectedDate = DateTime(2026, 1, 13);
@@ -20,14 +28,157 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
   String? _selectedPaciente;
   String _protocolo = '1 - Medicamento';
   final TextEditingController _instrucaoController = TextEditingController();
-  final TextEditingController _maxRetriesController = TextEditingController(text: '3');
-  final TextEditingController _intervaloController = TextEditingController(text: '10');
+  final TextEditingController _maxRetriesController = TextEditingController(
+    text: '3',
+  );
+  final TextEditingController _intervaloController = TextEditingController(
+    text: '10',
+  );
 
   @override
   void initState() {
     super.initState();
     if (widget.idosoNome != null) {
       _selectedPaciente = widget.idosoNome;
+    }
+  }
+
+  Future<void> _confirmarAgendamento() async {
+    final nomeMedicamento = _instrucaoController.text;
+
+    // 1. Se for medicamento e tiver nome, valida segurança
+    if (_protocolo == '1 - Medicamento' &&
+        nomeMedicamento.isNotEmpty &&
+        widget.idosoId != null) {
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final safetyResult = await MedicationService.checkSafety(
+        widget.idosoId!,
+        nomeMedicamento,
+        token: widget.token,
+      );
+
+      // Fechar loading
+      if (mounted) Navigator.pop(context);
+
+      if (!safetyResult.seguro && mounted) {
+        // ALERTA DE PERIGO!
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.warning, color: Colors.red),
+                const SizedBox(width: 8),
+                const Text('Risco Detectado!'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  safetyResult.alerta ?? 'Interação medicamentosa detectada.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Deseja prosseguir mesmo assim?',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  Navigator.pop(context); // Fecha alerta
+                  _finalizarCriacao(); // Prossegue por conta e risco
+                },
+                child: const Text(
+                  'Ignorar e Salvar',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+        return; // Pára aqui, só continua se usuário clicar em "Ignorar"
+      }
+    }
+
+    _finalizarCriacao();
+  }
+
+  Future<void> _finalizarCriacao() async {
+    if (widget.idosoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro: Idoso não selecionado')),
+      );
+      return;
+    }
+
+    // Criar objeto Agendamento
+    // Nota: Como é criação, ID é ignorado pelo backend
+    final novoAgendamento = Agendamento(
+      id: '',
+      nome: widget.idosoNome ?? 'Idoso',
+      telefone: '', // TODO: pegar telefone do idoso se disponível
+      dataHora: DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        10,
+        0, // TODO: hora selecionada
+      ),
+      tipo: _protocolo.split(' - ').last.toUpperCase(),
+      descricao: _instrucaoController.text,
+      status: 'AGENDADO',
+      tentativas: 0,
+      idosoId: widget.idosoId,
+    );
+
+    // Enviar para backend
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final sucesso = await AgendamentoService.createAgendamento(
+      novoAgendamento,
+      token: widget.token,
+    );
+
+    if (mounted) Navigator.pop(context); // Fechar loading
+
+    if (sucesso && mounted) {
+      Navigator.pop(context, true); // Retorna true para atualizar lista
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Agendamento criado com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro ao criar agendamento'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -55,7 +206,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE91E63),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.favorite, color: Colors.white, size: 20),
@@ -74,10 +225,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                 ),
                 Text(
                   'PAINEL DE CONTROLE | OPERADOR',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 10),
                 ),
               ],
             ),
@@ -91,7 +239,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
           children: [
             // Calendário
             _buildCalendar(),
-            
+
             const SizedBox(height: 24),
 
             // Detalhes do Paciente
@@ -150,7 +298,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                 icon: const Icon(Icons.check),
                 label: const Text('Confirmar Agendamento'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE91E63),
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -202,7 +350,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFE91E63),
+                  color: AppColors.primary,
                 ),
               ),
               Row(
@@ -211,7 +359,10 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                     icon: const Icon(Icons.chevron_left),
                     onPressed: () {
                       setState(() {
-                        _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+                        _currentMonth = DateTime(
+                          _currentMonth.year,
+                          _currentMonth.month - 1,
+                        );
                       });
                     },
                   ),
@@ -219,7 +370,10 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                     icon: const Icon(Icons.chevron_right),
                     onPressed: () {
                       setState(() {
-                        _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+                        _currentMonth = DateTime(
+                          _currentMonth.year,
+                          _currentMonth.month + 1,
+                        );
                       });
                     },
                   ),
@@ -232,18 +386,20 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
-                .map((day) => Expanded(
-                      child: Center(
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
-                            fontSize: 12,
-                          ),
+                .map(
+                  (day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                          fontSize: 12,
                         ),
                       ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 12),
@@ -263,8 +419,13 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
               if (day < 1 || day > lastDay.day) {
                 return const SizedBox();
               }
-              final date = DateTime(_currentMonth.year, _currentMonth.month, day);
-              final isSelected = date.day == _selectedDate.day &&
+              final date = DateTime(
+                _currentMonth.year,
+                _currentMonth.month,
+                day,
+              );
+              final isSelected =
+                  date.day == _selectedDate.day &&
                   date.month == _selectedDate.month &&
                   date.year == _selectedDate.year;
 
@@ -276,9 +437,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFFE91E63)
-                        : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -286,7 +445,9 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                       '$day',
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -321,7 +482,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.person, color: Color(0xFFE91E63)),
+                  const Icon(Icons.person, color: AppColors.primary),
                   const SizedBox(width: 8),
                   const Text(
                     'Detalhes do Paciente',
@@ -334,7 +495,10 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green[50],
                   borderRadius: BorderRadius.circular(20),
@@ -360,24 +524,27 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                border: Border.all(
+                  color: Colors.grey[300]!,
+                  style: BorderStyle.solid,
+                ),
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey[50],
               ),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.search,
-                    size: 48,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.search, size: 48, color: Colors.grey[400]),
                   const SizedBox(height: 8),
                   Text(
                     _selectedPaciente ?? 'Selecionar Paciente',
                     style: TextStyle(
                       fontSize: 16,
-                      color: _selectedPaciente != null ? Colors.black87 : Colors.grey[600],
-                      fontWeight: _selectedPaciente != null ? FontWeight.bold : FontWeight.normal,
+                      color: _selectedPaciente != null
+                          ? Colors.black87
+                          : Colors.grey[600],
+                      fontWeight: _selectedPaciente != null
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -427,9 +594,18 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
               isExpanded: true,
               underline: const SizedBox(),
               items: const [
-                DropdownMenuItem(value: '1 - Medicamento', child: Text('1 - Medicamento')),
-                DropdownMenuItem(value: '2 - Consulta', child: Text('2 - Consulta')),
-                DropdownMenuItem(value: '3 - Monitoramento', child: Text('3 - Monitoramento')),
+                DropdownMenuItem(
+                  value: '1 - Medicamento',
+                  child: Text('1 - Medicamento'),
+                ),
+                DropdownMenuItem(
+                  value: '2 - Consulta',
+                  child: Text('2 - Consulta'),
+                ),
+                DropdownMenuItem(
+                  value: '3 - Monitoramento',
+                  child: Text('3 - Monitoramento'),
+                ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -462,7 +638,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.description, color: Color(0xFFE91E63)),
+              const Icon(Icons.description, color: AppColors.primary),
               const SizedBox(width: 8),
               const Text(
                 'GESTÃO DA TAREFA',
@@ -555,34 +731,16 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
           Center(
             child: Column(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 48,
-                  color: Colors.grey[400],
-                ),
+                Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'Sem atividades para este período',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _confirmarAgendamento() {
-    // TODO: Implementar lógica de confirmação
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Agendamento confirmado com sucesso!'),
-        backgroundColor: Colors.green,
       ),
     );
   }
@@ -600,9 +758,8 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
       'Setembro',
       'Outubro',
       'Novembro',
-      'Dezembro'
+      'Dezembro',
     ];
     return months[month - 1];
   }
 }
-
