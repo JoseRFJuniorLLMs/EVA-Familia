@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'register_screen.dart';
 import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/secure_storage_service.dart';
+import 'package:local_auth/local_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -62,6 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         if (user != null) {
+          // Salvar credenciais para Face ID
+          await SecureStorageService.saveCredentials(email, senhaHash);
+
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
           );
@@ -83,12 +89,104 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleFaceIdLogin() {
-    // TODO: Implementar lógica de Face ID aqui
+  Future<void> _handleFaceIdLogin() async {
+    final LocalAuthentication auth = LocalAuthentication();
+
+    try {
+      // Verifica se há credenciais salvas
+      final hasCredentials = await SecureStorageService.hasCredentials();
+      if (!hasCredentials) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nenhuma credencial salva. Faça login primeiro.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Verifica se o dispositivo suporta biometria
+      final canCheckBiometrics = await auth.canCheckBiometrics;
+      final isDeviceSupported = await auth.isDeviceSupported();
+
+      if (!canCheckBiometrics || !isDeviceSupported) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Biometria não disponível neste dispositivo.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Autentica com biometria
+      final didAuthenticate = await auth.authenticate(
+        localizedReason: 'Autentique-se para fazer login',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+
+      if (didAuthenticate) {
+        // Recupera credenciais salvas
+        final credentials = await SecureStorageService.getCredentials();
+        if (credentials != null) {
+          setState(() {
+            _isLoading = true;
+          });
+
+          try {
+            final user = await AuthService.login(
+              credentials['email']!,
+              credentials['senha']!,
+            );
+
+            if (mounted) {
+              if (user != null) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => HomeScreen(user: user),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Erro ao fazer login. Tente novamente.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } finally {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Erro Face ID: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao autenticar com biometria.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _navigateToSignUp() {
-    // TODO: Implementar navegação para tela de cadastro
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+    );
   }
 
   @override
@@ -206,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: _passwordFocusNode.hasFocus
+                            color: _senhaHashFocusNode.hasFocus
                                 ? AppColors.primary
                                 : Colors.transparent,
                             width: 1.5,

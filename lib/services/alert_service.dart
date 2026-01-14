@@ -56,8 +56,8 @@ class AlertService {
       print('📡 Buscando alertas do backend...');
 
       final url = idosoId != null
-          ? '$_baseUrl/alertas?idoso_id=$idosoId'
-          : '$_baseUrl/alertas';
+          ? '$_baseUrl/api/v1/alertas?idoso_id=$idosoId'
+          : '$_baseUrl/api/v1/alertas';
 
       final headers = <String, String>{'Content-Type': 'application/json'};
 
@@ -99,7 +99,7 @@ class AlertService {
       }
 
       final response = await http.patch(
-        Uri.parse('$_baseUrl/alertas/$id/resolver'),
+        Uri.parse('$_baseUrl/api/v1/alertas/$id/resolver'),
         headers: headers,
         body: jsonEncode({'nota': nota}),
       );

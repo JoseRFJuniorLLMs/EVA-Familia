@@ -11,8 +11,8 @@ class AgendamentoService {
   }) async {
     try {
       final url = idosoId != null
-          ? '$_baseUrl/agendamentos?idoso_id=$idosoId'
-          : '$_baseUrl/agendamentos';
+          ? '$_baseUrl/api/v1/agendamentos?idoso_id=$idosoId'
+          : '$_baseUrl/api/v1/agendamentos';
 
       final headers = <String, String>{'Content-Type': 'application/json'};
 
@@ -56,7 +56,7 @@ class AgendamentoService {
       };
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/agendamentos'),
+        Uri.parse('$_baseUrl/api/v1/agendamentos'),
         headers: headers,
         body: jsonEncode(body),
       );

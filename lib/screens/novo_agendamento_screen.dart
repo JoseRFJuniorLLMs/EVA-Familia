@@ -3,6 +3,7 @@ import '../constants/app_colors.dart';
 import '../services/medication_service.dart';
 import '../services/agendamento_service.dart';
 import '../models/agendamento.dart';
+import '../models/catalogo_medicamento.dart';
 
 class NovoAgendamentoScreen extends StatefulWidget {
   final String? idosoId;
@@ -35,12 +36,134 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
     text: '10',
   );
 
+  // Medication intelligence
+  List<CatalogoMedicamento> _catalogoSuggestions = [];
+  CatalogoMedicamento? _selectedMedicamento;
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
     if (widget.idosoNome != null) {
       _selectedPaciente = widget.idosoNome;
     }
+  }
+
+  Future<void> _searchMedicamentos(String query) async {
+    if (query.length < 3) {
+      setState(() {
+        _catalogoSuggestions = [];
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    final results = await MedicationService.searchCatalogo(
+      query,
+      token: widget.token,
+    );
+
+    if (mounted) {
+      setState(() {
+        _catalogoSuggestions = results;
+        _isSearching = false;
+      });
+    }
+  }
+
+  Future<void> _selectMedicamento(CatalogoMedicamento medicamento) async {
+    setState(() {
+      _selectedMedicamento = medicamento;
+      _instrucaoController.text = medicamento.nomeOficial;
+      _catalogoSuggestions = [];
+    });
+
+    // Verificar interações
+    if (widget.idosoId != null) {
+      _checkInteracoes(medicamento.nomeOficial);
+    }
+  }
+
+  Future<void> _checkInteracoes(String medicamento) async {
+    if (widget.idosoId == null) return;
+
+    final interacoes = await MedicationService.checkInteracoes(
+      widget.idosoId!,
+      medicamento,
+      token: widget.token,
+    );
+
+    if (interacoes.isNotEmpty && mounted) {
+      final criticas = interacoes.where((i) => i.isCritico).toList();
+      if (criticas.isNotEmpty) {
+        _showInteractionAlert(criticas);
+      }
+    }
+  }
+
+  void _showInteractionAlert(List<InteracaoRisco> interacoes) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber, color: Colors.red, size: 32),
+            const SizedBox(width: 12),
+            const Text('Interação Detectada!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...interacoes.map(
+              (interacao) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'NÍVEL: ${interacao.nivelPerigo}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[900],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${interacao.medicamentoA} + ${interacao.medicamentoB}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(interacao.descricao),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmarAgendamento() async {
@@ -651,17 +774,163 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _instrucaoController,
-            decoration: InputDecoration(
-              labelText: 'INSTRUÇÃO / MEDICAMENTO',
-              hintText: 'Ex: Losartana 50mg',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          // Campo de medicamento com autocomplete
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _instrucaoController,
+                decoration: InputDecoration(
+                  labelText: 'INSTRUÇÃO / MEDICAMENTO',
+                  hintText: 'Ex: Losartana 50mg',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  suffixIcon: _isSearching
+                      ? const Padding(
+                          padding: EdgeInsets.all(12.0),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : null,
+                ),
+                onChanged: _searchMedicamentos,
               ),
-              filled: true,
-              fillColor: Colors.grey[50],
-            ),
+              // Sugestões do catálogo
+              if (_catalogoSuggestions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _catalogoSuggestions.length,
+                    itemBuilder: (context, index) {
+                      final med = _catalogoSuggestions[index];
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.medication,
+                          color: AppColors.primary,
+                        ),
+                        title: Text(
+                          med.nomeOficial,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(med.classeTerapeutica),
+                        trailing: med.riscos.any((r) => r.ativo)
+                            ? const Icon(
+                                Icons.warning_amber,
+                                color: Colors.orange,
+                              )
+                            : null,
+                        onTap: () => _selectMedicamento(med),
+                      );
+                    },
+                  ),
+                ),
+              // Informações do medicamento selecionado
+              if (_selectedMedicamento != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _selectedMedicamento!.nomeOficial,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Classe: ${_selectedMedicamento!.classeTerapeutica}',
+                        style: TextStyle(color: Colors.grey[700]),
+                      ),
+                      if (_selectedMedicamento!.doseMaximaMg != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Dose Máxima: ${_selectedMedicamento!.doseMaximaMg}mg/dia',
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                      ],
+                      if (_selectedMedicamento!.riscos.any((r) => r.ativo)) ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          '⚠️ RISCOS GERIÁTRICOS:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _selectedMedicamento!.riscos
+                              .where((r) => r.ativo)
+                              .map(
+                                (risco) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[100],
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.orange[300]!,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    risco.tipoFormatado,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[900],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(

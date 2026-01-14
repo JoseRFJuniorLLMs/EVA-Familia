@@ -40,15 +40,23 @@ class AuthService {
 
   static Future<Usuario?> login(String email, String senhaHash) async {
     try {
-      print('🔐 Tentando login para: $email');
+      print('🔐 ========== INÍCIO DO LOGIN ==========');
+      print('📧 Email: $email');
+      print('🔑 Senha: ${senhaHash.substring(0, 3)}***');
+      print('🌐 URL: $_baseUrl/api/v1/auth/login');
+
+      final requestBody = {'email': email.trim(), 'senha_hash': senhaHash};
+      print('📦 Request Body: $requestBody');
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/auth/login'),
+        Uri.parse('$_baseUrl/api/v1/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email.trim(), 'senha_hash': senhaHash}),
+        body: jsonEncode(requestBody),
       );
 
       print('📡 Status Code: ${response.statusCode}');
+      print('📡 Response Headers: ${response.headers}');
+      print('📡 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -63,6 +71,7 @@ class AuthService {
         final userData = _decodeJWT(token);
 
         print('✅ Login bem-sucedido! User ID: ${userData['user_id']}');
+        print('🔐 ========== FIM DO LOGIN ==========');
 
         final user = Usuario(
           id: userData['user_id']?.toString() ?? 'unknown',
@@ -79,10 +88,79 @@ class AuthService {
         return user;
       } else {
         print('❌ Erro no login: ${response.statusCode}');
+        print('❌ Response: ${response.body}');
+        print('🔐 ========== FIM DO LOGIN (ERRO) ==========');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      print('💥 Exception Auth: $e');
+      print('📚 Stack trace: $stackTrace');
+      print('🔐 ========== FIM DO LOGIN (EXCEPTION) ==========');
+      return null;
+    }
+  }
+
+  /// Registra novo usuário
+  static Future<Usuario?> register({
+    required String name,
+    required String email,
+    required String senhaHash,
+    String role = 'cuidador',
+  }) async {
+    try {
+      print('📝 Registrando novo usuário: $email');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/v1/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email.trim(),
+          'senha_hash': senhaHash,
+          'role': role,
+        }),
+      );
+
+      print('📡 Status Code: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final token = data['access_token'];
+
+        if (token == null) {
+          print('❌ Token não encontrado na resposta');
+          return null;
+        }
+
+        // Decodificar JWT para extrair dados do usuário
+        final userData = _decodeJWT(token);
+
+        print('✅ Registro bem-sucedido! User ID: ${userData['user_id']}');
+
+        final user = Usuario(
+          id: userData['user_id']?.toString() ?? 'unknown',
+          name: userData['name'] ?? name,
+          email: userData['sub'] ?? email,
+          role: userData['role'] ?? role,
+          linkedIdosoId: userData['idoso_id']?.toString(),
+          accessToken: token,
+        );
+
+        // Persistir token
+        await _saveToken(token);
+
+        return user;
+      } else if (response.statusCode == 400) {
+        print('❌ Email já cadastrado');
+        return null;
+      } else {
+        print('❌ Erro no registro: ${response.statusCode}');
+        print('❌ Response: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('💥 Exception Auth: $e');
+      print('💥 Exception Register: $e');
       return null;
     }
   }
