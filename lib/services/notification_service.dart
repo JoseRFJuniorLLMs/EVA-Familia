@@ -1,6 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
+import '../main.dart' show navigatorKey;
+import '../screens/alertas_screen.dart';
+import '../screens/historico_screen.dart';
+import '../screens/idoso_agendamentos_screen.dart';
 
 // Handler para mensagens em background
 @pragma('vm:entry-point')
@@ -13,6 +18,9 @@ class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  // Armazena dados pendentes de navegação
+  static Map<String, dynamic>? _pendingNavigationData;
 
   /// Inicializa o serviço de notificações
   static Future<void> initialize() async {
@@ -109,13 +117,103 @@ class NotificationService {
   /// Handler para quando o app é aberto via notificação
   static void _handleMessageOpenedApp(RemoteMessage message) {
     print('📬 App opened from notification: ${message.messageId}');
-    // TODO: Navegar para tela específica baseado em message.data
+    _navigateBasedOnData(message.data);
   }
 
   /// Handler para tap em notificação local
   static void _onNotificationTap(NotificationResponse response) {
     print('👆 Notification tapped: ${response.payload}');
-    // TODO: Navegar para tela específica
+    if (response.payload != null) {
+      try {
+        // Tentar parsear o payload como dados de navegação
+        _navigateBasedOnPayload(response.payload!);
+      } catch (e) {
+        print('❌ Erro ao processar payload: $e');
+      }
+    }
+  }
+
+  /// Navega baseado nos dados da notificação FCM
+  static void _navigateBasedOnData(Map<String, dynamic> data) {
+    final type = data['type'] ?? data['tipo'];
+    final idosoId = data['idoso_id'];
+    final idosoNome = data['idoso_nome'] ?? 'Paciente';
+
+    print('🧭 Navegando para tipo: $type, idosoId: $idosoId');
+
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      print('⚠️ Contexto não disponível, salvando navegação pendente');
+      _pendingNavigationData = data;
+      return;
+    }
+
+    switch (type) {
+      case 'alerta':
+      case 'alert':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AlertasScreen()),
+        );
+        break;
+
+      case 'agendamento':
+      case 'appointment':
+        if (idosoId != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => IdosoAgendamentosScreen(
+                idosoId: idosoId.toString(),
+                idosoNome: idosoNome.toString(),
+              ),
+            ),
+          );
+        }
+        break;
+
+      case 'chamada':
+      case 'call':
+      case 'historico':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const HistoricoScreen()),
+        );
+        break;
+
+      default:
+        print('ℹ️ Tipo de notificação desconhecido: $type');
+    }
+  }
+
+  /// Navega baseado no payload string (formato: "type:value,key:value")
+  static void _navigateBasedOnPayload(String payload) {
+    // Formato esperado: {type: alerta, idoso_id: 123}
+    final data = <String, dynamic>{};
+
+    // Tentar parsear como string formatada
+    if (payload.contains(':')) {
+      final parts = payload
+          .replaceAll('{', '')
+          .replaceAll('}', '')
+          .split(',');
+      for (var part in parts) {
+        final keyValue = part.trim().split(':');
+        if (keyValue.length == 2) {
+          data[keyValue[0].trim()] = keyValue[1].trim();
+        }
+      }
+    }
+
+    if (data.isNotEmpty) {
+      _navigateBasedOnData(data);
+    }
+  }
+
+  /// Processa navegação pendente (chamar após login)
+  static void processPendingNavigation() {
+    if (_pendingNavigationData != null) {
+      print('🔄 Processando navegação pendente...');
+      _navigateBasedOnData(_pendingNavigationData!);
+      _pendingNavigationData = null;
+    }
   }
 
   /// Exibe notificação local

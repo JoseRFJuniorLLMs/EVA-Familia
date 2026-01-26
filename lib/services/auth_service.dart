@@ -184,9 +184,15 @@ class AuthService {
       final token = prefs.getString(_tokenKey);
       if (token == null) return null;
 
-      // TODO: verificar validade do token (expiração)
       final userData = _decodeJWT(token);
       if (userData.isEmpty) return null;
+
+      // Verificar se o token expirou
+      if (!_isTokenValid(userData)) {
+        print('⚠️ Token expirado, removendo...');
+        await logout();
+        return null;
+      }
 
       return Usuario(
         id: userData['user_id']?.toString() ?? 'unknown',
@@ -199,6 +205,46 @@ class AuthService {
     } catch (e) {
       print('Erro no auto-login: $e');
       return null;
+    }
+  }
+
+  /// Verifica se o token JWT ainda é válido (não expirou)
+  static bool _isTokenValid(Map<String, dynamic> payload) {
+    try {
+      final exp = payload['exp'];
+      if (exp == null) {
+        // Se não tem exp, considera válido (backend não usa expiração)
+        return true;
+      }
+
+      final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      final now = DateTime.now();
+
+      // Token é válido se a data de expiração é no futuro
+      final isValid = expirationDate.isAfter(now);
+
+      if (!isValid) {
+        print('🕐 Token expirou em: $expirationDate');
+      }
+
+      return isValid;
+    } catch (e) {
+      print('❌ Erro ao verificar expiração do token: $e');
+      return true; // Em caso de erro, assume válido
+    }
+  }
+
+  /// Verifica se o token atual é válido
+  static Future<bool> isCurrentTokenValid() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(_tokenKey);
+      if (token == null) return false;
+
+      final userData = _decodeJWT(token);
+      return _isTokenValid(userData);
+    } catch (e) {
+      return false;
     }
   }
 

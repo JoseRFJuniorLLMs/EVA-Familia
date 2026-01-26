@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/agendamento.dart';
 import 'idoso_agendamentos_screen.dart';
+import 'novo_agendamento_screen.dart';
 import '../constants/app_colors.dart';
 
 import '../services/agendamento_service.dart';
+import '../services/idoso_service.dart';
+import '../models/idoso.dart' as idoso_model;
 
 class AgendamentoScreen extends StatefulWidget {
   final String? token;
@@ -53,6 +56,112 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
         _idosos = idososMap.values.toList();
         _isLoading = false;
       });
+    }
+  }
+
+  /// Mostra dialog para selecionar idoso e criar novo agendamento
+  Future<void> _showNovoAgendamentoDialog() async {
+    // Carregar lista de idosos do backend
+    final idososList = await IdosoService.getIdosos(token: widget.token);
+
+    if (!mounted) return;
+
+    if (idososList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nenhum idoso cadastrado. Cadastre um idoso primeiro.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Mostrar dialog para selecionar idoso
+    final selectedIdoso = await showDialog<idoso_model.Idoso>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.person_add, color: AppColors.primary),
+            const SizedBox(width: 12),
+            const Text('Selecionar Paciente'),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          height: 400,
+          child: Column(
+            children: [
+              // Campo de busca
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Buscar idoso...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Lista de idosos
+              Expanded(
+                child: ListView.builder(
+                  itemCount: idososList.length,
+                  itemBuilder: (context, index) {
+                    final idoso = idososList[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                        child: Text(
+                          idoso.nome.isNotEmpty ? idoso.nome[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        idoso.nome,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(idoso.telefone ?? 'Sem telefone'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.pop(context, idoso),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedIdoso == null || !mounted) return;
+
+    // Navegar para tela de novo agendamento com idoso selecionado
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NovoAgendamentoScreen(
+          idosoId: selectedIdoso.id,
+          idosoNome: selectedIdoso.nome,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    // Recarregar dados se criou agendamento
+    if (result == true) {
+      _loadData();
     }
   }
 
@@ -527,9 +636,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
               const SizedBox(width: 16),
               // Botão Novo Nexus
               ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implementar criação de novo agendamento
-                },
+                onPressed: () => _showNovoAgendamentoDialog(),
                 icon: const Icon(Icons.calendar_today),
                 label: const Text('NOVO NEXUS'),
                 style: ElevatedButton.styleFrom(

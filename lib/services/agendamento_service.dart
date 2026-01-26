@@ -68,6 +68,66 @@ class AgendamentoService {
     }
   }
 
+  /// Cancela um agendamento (muda status para CANCELADO ou deleta)
+  static Future<bool> cancelAgendamento(
+    String agendamentoId, {
+    String? token,
+  }) async {
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+
+      // Tentar PATCH para mudar status
+      var response = await http.patch(
+        Uri.parse('$_baseUrl/api/v1/agendamentos/$agendamentoId'),
+        headers: headers,
+        body: jsonEncode({'status': 'CANCELADO'}),
+      );
+
+      print('📡 PATCH agendamento $agendamentoId: ${response.statusCode}');
+
+      // Se PATCH não funcionar, tentar DELETE
+      if (response.statusCode == 404 || response.statusCode == 405) {
+        response = await http.delete(
+          Uri.parse('$_baseUrl/api/v1/agendamentos/$agendamentoId'),
+          headers: headers,
+        );
+        print('📡 DELETE agendamento $agendamentoId: ${response.statusCode}');
+      }
+
+      return response.statusCode == 200 ||
+          response.statusCode == 204 ||
+          response.statusCode == 201;
+    } catch (e) {
+      print('💥 Erro ao cancelar agendamento: $e');
+      return false;
+    }
+  }
+
+  /// Atualiza status de um agendamento
+  static Future<bool> updateAgendamentoStatus(
+    String agendamentoId,
+    String newStatus, {
+    String? token,
+  }) async {
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/api/v1/agendamentos/$agendamentoId'),
+        headers: headers,
+        body: jsonEncode({'status': newStatus}),
+      );
+
+      print('📡 Update status $agendamentoId -> $newStatus: ${response.statusCode}');
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('💥 Erro ao atualizar status: $e');
+      return false;
+    }
+  }
+
   static Agendamento _fromJson(Map<String, dynamic> json) {
     return Agendamento(
       id: json['id'].toString(),

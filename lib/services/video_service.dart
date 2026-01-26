@@ -32,4 +32,34 @@ class VideoService {
       return null;
     }
   }
+
+  /// Inicia uma sessão de vídeo/voz IA para um idoso
+  /// Retorna true se sucesso, false se falha.
+  static Future<bool> startVideoSession(
+    String idosoId,
+    String idosoNome, {
+    String? role,
+    String? token,
+  }) async {
+    try {
+      final headers = {'Content-Type': 'application/json'};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/video/start'),
+        body: jsonEncode({
+          'idoso_id': idosoId,
+          'idoso_nome': idosoNome,
+          'role': role ?? 'family',
+        }),
+        headers: headers,
+      );
+
+      print('📹 Start video session: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('💥 Exception startVideoSession: $e');
+      return false;
+    }
+  }
 }

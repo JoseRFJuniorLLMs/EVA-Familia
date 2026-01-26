@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../services/medication_service.dart';
 import '../services/agendamento_service.dart';
-import '../models/agendamento.dart';
+import '../services/idoso_service.dart';
+import '../models/agendamento.dart' hide Idoso;
 import '../models/catalogo_medicamento.dart';
+import '../models/idoso.dart';
 
 class NovoAgendamentoScreen extends StatefulWidget {
   final String? idosoId;
@@ -24,10 +26,13 @@ class NovoAgendamentoScreen extends StatefulWidget {
 // ... (in _NovoAgendamentoScreenState class)
 
 class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
-  DateTime _selectedDate = DateTime(2026, 1, 13);
-  DateTime _currentMonth = DateTime(2026, 1);
-  String? _selectedPaciente;
+  DateTime _selectedDate = DateTime.now();
+  DateTime _currentMonth = DateTime.now();
+  String? _selectedPacienteId;
+  String? _selectedPacienteNome;
+  String? _selectedPacienteTelefone;
   String _protocolo = '1 - Medicamento';
+  TimeOfDay _selectedTime = TimeOfDay.now();
   final TextEditingController _instrucaoController = TextEditingController();
   final TextEditingController _maxRetriesController = TextEditingController(
     text: '3',
@@ -41,11 +46,191 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
   CatalogoMedicamento? _selectedMedicamento;
   bool _isSearching = false;
 
+  // Lista de idosos para seleção
+  List<Idoso> _idososDisponiveis = [];
+  bool _isLoadingIdosos = false;
+
   @override
   void initState() {
     super.initState();
-    if (widget.idosoNome != null) {
-      _selectedPaciente = widget.idosoNome;
+    if (widget.idosoId != null && widget.idosoNome != null) {
+      _selectedPacienteId = widget.idosoId;
+      _selectedPacienteNome = widget.idosoNome;
+      // Carregar telefone do idoso
+      _loadIdosoTelefone();
+    }
+    _loadIdososDisponiveis();
+  }
+
+  /// Carrega lista de idosos disponíveis para seleção
+  Future<void> _loadIdososDisponiveis() async {
+    setState(() => _isLoadingIdosos = true);
+
+    try {
+      final idosos = await IdosoService.getIdosos(token: widget.token);
+      if (mounted) {
+        setState(() {
+          _idososDisponiveis = idosos;
+          _isLoadingIdosos = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar idosos: $e');
+      if (mounted) {
+        setState(() => _isLoadingIdosos = false);
+      }
+    }
+  }
+
+  /// Carrega telefone do idoso selecionado
+  Future<void> _loadIdosoTelefone() async {
+    if (_selectedPacienteId == null) return;
+
+    try {
+      final idoso = await IdosoService.getIdoso(
+        _selectedPacienteId!,
+        token: widget.token,
+      );
+
+      if (mounted && idoso != null) {
+        setState(() {
+          _selectedPacienteTelefone = idoso.telefone;
+        });
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar telefone do idoso: $e');
+    }
+  }
+
+  /// Mostra dialog para selecionar paciente
+  Future<void> _showPacienteSelectorDialog() async {
+    if (_idososDisponiveis.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nenhum idoso cadastrado'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final selectedIdoso = await showDialog<Idoso>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.person_search, color: AppColors.primary),
+            const SizedBox(width: 12),
+            const Text('Selecionar Paciente'),
+          ],
+        ),
+        content: SizedBox(
+          width: 350,
+          height: 400,
+          child: _isLoadingIdosos
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  itemCount: _idososDisponiveis.length,
+                  itemBuilder: (context, index) {
+                    final idoso = _idososDisponiveis[index];
+                    final isSelected = _selectedPacienteId == idoso.id;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.grey[300]!,
+                        ),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isSelected
+                              ? AppColors.primary
+                              : Colors.grey[300],
+                          child: Text(
+                            idoso.nome.isNotEmpty
+                                ? idoso.nome[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          idoso.nome,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.black87,
+                          ),
+                        ),
+                        subtitle: Text(
+                          idoso.telefone ?? 'Sem telefone cadastrado',
+                          style: TextStyle(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.7)
+                                : Colors.grey[600],
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle, color: AppColors.primary)
+                            : const Icon(Icons.chevron_right, color: Colors.grey),
+                        onTap: () => Navigator.pop(context, idoso),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedIdoso != null && mounted) {
+      setState(() {
+        _selectedPacienteId = selectedIdoso.id;
+        _selectedPacienteNome = selectedIdoso.nome;
+        _selectedPacienteTelefone = selectedIdoso.telefone;
+      });
+    }
+  }
+
+  /// Mostra seletor de hora
+  Future<void> _selectTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedTime = picked;
+      });
     }
   }
 
@@ -82,16 +267,16 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
     });
 
     // Verificar interações
-    if (widget.idosoId != null) {
+    if (_selectedPacienteId != null) {
       _checkInteracoes(medicamento.nomeOficial);
     }
   }
 
   Future<void> _checkInteracoes(String medicamento) async {
-    if (widget.idosoId == null) return;
+    if (_selectedPacienteId == null) return;
 
     final interacoes = await MedicationService.checkInteracoes(
-      widget.idosoId!,
+      _selectedPacienteId!,
       medicamento,
       token: widget.token,
     );
@@ -172,7 +357,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
     // 1. Se for medicamento e tiver nome, valida segurança
     if (_protocolo == '1 - Medicamento' &&
         nomeMedicamento.isNotEmpty &&
-        widget.idosoId != null) {
+        _selectedPacienteId != null) {
       // Mostrar loading
       showDialog(
         context: context,
@@ -181,7 +366,7 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
       );
 
       final safetyResult = await MedicationService.checkSafety(
-        widget.idosoId!,
+        _selectedPacienteId!,
         nomeMedicamento,
         token: widget.token,
       );
@@ -246,31 +431,43 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
   }
 
   Future<void> _finalizarCriacao() async {
-    if (widget.idosoId == null) {
+    if (_selectedPacienteId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro: Idoso não selecionado')),
+        const SnackBar(
+          content: Text('Selecione um paciente primeiro'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
 
-    // Criar objeto Agendamento
-    // Nota: Como é criação, ID é ignorado pelo backend
+    if (_instrucaoController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha a instrução/medicamento'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Criar objeto Agendamento com horário selecionado
     final novoAgendamento = Agendamento(
       id: '',
-      nome: widget.idosoNome ?? 'Idoso',
-      telefone: '', // TODO: pegar telefone do idoso se disponível
+      nome: _selectedPacienteNome ?? 'Idoso',
+      telefone: _selectedPacienteTelefone ?? '',
       dataHora: DateTime(
         _selectedDate.year,
         _selectedDate.month,
         _selectedDate.day,
-        10,
-        0, // TODO: hora selecionada
+        _selectedTime.hour,
+        _selectedTime.minute,
       ),
       tipo: _protocolo.split(' - ').last.toUpperCase(),
       descricao: _instrucaoController.text,
       status: 'AGENDADO',
       tentativas: 0,
-      idosoId: widget.idosoId,
+      idosoId: _selectedPacienteId,
     );
 
     // Enviar para backend
@@ -584,6 +781,8 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
   }
 
   Widget _buildDetalhesPaciente() {
+    final hasPaciente = _selectedPacienteNome != null;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -623,16 +822,18 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green[50],
+                  color: hasPaciente ? Colors.green[50] : Colors.orange[50],
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.green[200]!),
+                  border: Border.all(
+                    color: hasPaciente ? Colors.green[200]! : Colors.orange[200]!,
+                  ),
                 ),
                 child: Text(
-                  'SESSÃO ATIVA',
+                  hasPaciente ? 'PACIENTE SELECIONADO' : 'AGUARDANDO SELEÇÃO',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green[700],
+                    color: hasPaciente ? Colors.green[700] : Colors.orange[700],
                   ),
                 ),
               ),
@@ -640,39 +841,132 @@ class _NovoAgendamentoScreenState extends State<NovoAgendamentoScreen> {
           ),
           const SizedBox(height: 16),
           InkWell(
-            onTap: () {
-              // TODO: Abrir seletor de paciente
-            },
+            onTap: _showPacienteSelectorDialog,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(40),
+              padding: EdgeInsets.all(hasPaciente ? 20 : 40),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: Colors.grey[300]!,
+                  color: hasPaciente ? AppColors.primary : Colors.grey[300]!,
                   style: BorderStyle.solid,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[50],
+                color: hasPaciente
+                    ? AppColors.primary.withValues(alpha: 0.05)
+                    : Colors.grey[50],
               ),
-              child: Column(
-                children: [
-                  Icon(Icons.search, size: 48, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    _selectedPaciente ?? 'Selecionar Paciente',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: _selectedPaciente != null
-                          ? Colors.black87
-                          : Colors.grey[600],
-                      fontWeight: _selectedPaciente != null
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+              child: hasPaciente
+                  ? Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: AppColors.primary,
+                          child: Text(
+                            _selectedPacienteNome![0].toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedPacienteNome!,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (_selectedPacienteTelefone != null)
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.phone,
+                                      size: 16,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _selectedPacienteTelefone!,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Text(
+                                  'Sem telefone cadastrado',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.edit,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Icon(Icons.person_add, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Toque para selecionar paciente',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          // Seletor de horário
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: _selectTime,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[50],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.access_time, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

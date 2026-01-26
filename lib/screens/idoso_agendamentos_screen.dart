@@ -5,6 +5,7 @@ import '../constants/app_colors.dart';
 import 'video_call_screen.dart';
 
 import '../services/agendamento_service.dart';
+import '../services/video_service.dart';
 
 class IdosoAgendamentosScreen extends StatefulWidget {
   final String idosoId;
@@ -45,6 +46,262 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
         _agendamentos = dados;
         _isLoading = false;
       });
+    }
+  }
+
+  /// Inicia chamada de voz com IA para o agendamento
+  Future<void> _iniciarVozIA(Agendamento agendamento) async {
+    // Mostrar confirmação
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.smart_toy, color: Colors.orange[700]),
+            const SizedBox(width: 12),
+            const Text('Chamada EVA IA'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A EVA vai ligar para ${agendamento.nome} no telefone:',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.phone, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    agendamento.telefone,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Motivo: ${agendamento.tipo} - ${agendamento.descricao}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.phone),
+            label: const Text('Iniciar Chamada'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[700],
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Iniciando chamada EVA...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Iniciar chamada via VideoService (pode adaptar para chamada de voz)
+      final success = await VideoService.startVideoSession(
+        widget.idosoId,
+        widget.idosoNome,
+        role: 'eva_voice',
+        token: widget.token,
+      );
+
+      if (mounted) Navigator.pop(context); // Fechar loading
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chamada iniciada para ${agendamento.nome}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Recarregar agendamentos
+        _loadAgendamentos();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao iniciar chamada. Tente novamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Fechar loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Cancela um agendamento
+  Future<void> _cancelarAgendamento(Agendamento agendamento) async {
+    // Mostrar confirmação
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning, color: Colors.red),
+            const SizedBox(width: 12),
+            const Text('Cancelar Agendamento'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tem certeza que deseja cancelar este agendamento?',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    agendamento.nome,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${agendamento.tipo} - ${agendamento.descricao}',
+                    style: TextStyle(color: Colors.grey[700]),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${agendamento.dataHora.day.toString().padLeft(2, '0')}/${agendamento.dataHora.month.toString().padLeft(2, '0')} às ${agendamento.dataHora.hour.toString().padLeft(2, '0')}:${agendamento.dataHora.minute.toString().padLeft(2, '0')}',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Esta ação não pode ser desfeita.',
+              style: TextStyle(
+                color: Colors.red[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete),
+            label: const Text('Cancelar Agendamento'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final success = await AgendamentoService.cancelAgendamento(
+        agendamento.id,
+        token: widget.token,
+      );
+
+      if (mounted) Navigator.pop(context); // Fechar loading
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Agendamento cancelado com sucesso'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Recarregar lista
+        _loadAgendamentos();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao cancelar agendamento'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Fechar loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -530,9 +787,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            // TODO: Implementar ação de Voz IA
-                          },
+                          onPressed: () => _iniciarVozIA(agendamento),
                           icon: const Icon(Icons.smart_toy, size: 14),
                           label: const Text(
                             'VOZ IA',
@@ -552,9 +807,7 @@ class _IdosoAgendamentosScreenState extends State<IdosoAgendamentosScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            // TODO: Implementar ação de cancelar
-                          },
+                          onPressed: () => _cancelarAgendamento(agendamento),
                           icon: const Icon(Icons.delete_outline, size: 14),
                           label: const Text(
                             'CANCELAR',

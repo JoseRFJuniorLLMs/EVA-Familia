@@ -4,6 +4,7 @@ import '../models/agendamento.dart';
 import '../constants/app_colors.dart';
 
 import '../services/auth_service.dart';
+import '../services/idoso_service.dart';
 import 'idoso_agendamentos_screen.dart';
 import 'idoso_list_screen.dart';
 import 'historico_screen.dart';
@@ -11,6 +12,7 @@ import 'settings_screen.dart';
 import 'saude_emocional_screen.dart';
 import 'alertas_screen.dart';
 import 'dashboard_saude_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Usuario user;
@@ -22,6 +24,181 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedMenuItem = 'Painel Principal';
+  String? _linkedIdosoNome;
+  bool _isLoadingIdosoNome = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLinkedIdosoNome();
+  }
+
+  /// Carrega o nome do idoso vinculado ao usuário
+  Future<void> _loadLinkedIdosoNome() async {
+    if (widget.user.linkedIdosoId == null) return;
+
+    setState(() {
+      _isLoadingIdosoNome = true;
+    });
+
+    try {
+      final idoso = await IdosoService.getIdoso(
+        widget.user.linkedIdosoId!,
+        token: widget.user.accessToken,
+      );
+
+      if (mounted && idoso != null) {
+        setState(() {
+          _linkedIdosoNome = idoso.nome;
+          _isLoadingIdosoNome = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar nome do idoso: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingIdosoNome = false;
+        });
+      }
+    }
+  }
+
+  /// Faz logout do usuário
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair'),
+        content: const Text('Deseja realmente sair da sua conta?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await AuthService.logout();
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  /// Mostra opções de perfil/logout
+  void _showProfileOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Avatar e Nome
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+              child: Text(
+                widget.user.name.isNotEmpty
+                    ? widget.user.name[0].toUpperCase()
+                    : 'U',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.user.name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              widget.user.email,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                widget.user.role.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            // Opções
+            ListTile(
+              leading: const Icon(Icons.person, color: AppColors.primary),
+              title: const Text('Meu Perfil'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SettingsScreen(token: widget.user.accessToken),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings, color: Colors.grey),
+              title: const Text('Configurações'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SettingsScreen(token: widget.user.accessToken),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Sair', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _logout();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // Agendamentos mockados para o Painel Principal
   final List<Agendamento> _ultimosAgendamentos = [
@@ -190,8 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         MaterialPageRoute(
                           builder: (context) => IdosoAgendamentosScreen(
                             idosoId: widget.user.linkedIdosoId!,
-                            idosoNome:
-                                'Berna Camargo', // TODO: Pegar nome real do backend
+                            idosoNome: _linkedIdosoNome ?? 'Paciente',
                             token: widget.user.accessToken,
                           ),
                         ),
@@ -244,9 +420,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         MaterialPageRoute(
                           builder: (context) => DashboardSaudeScreen(
                             idosoId: widget.user.linkedIdosoId!,
-                            idosoNome: 'Berna Camargo', // TODO: Pegar nome real
+                            idosoNome: _linkedIdosoNome ?? 'Paciente',
                             token: widget.user.accessToken,
                           ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Nenhum idoso vinculado ao seu perfil'),
                         ),
                       );
                     }
@@ -264,6 +446,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             idosoId: widget.user.linkedIdosoId!,
                             token: widget.user.accessToken,
                           ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Nenhum idoso vinculado ao seu perfil'),
                         ),
                       );
                     }
@@ -324,9 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   icon: const Icon(Icons.arrow_forward_ios, size: 16),
                   color: Colors.grey[600],
-                  onPressed: () {
-                    // TODO: Implementar ação (logout ou perfil)
-                  },
+                  onPressed: _showProfileOptions,
                 ),
               ],
             ),
@@ -567,7 +753,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton.icon(
               onPressed: () {
-                // TODO: Navegar para análise da psicóloga
+                if (widget.user.linkedIdosoId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SaudeEmocionalScreen(
+                        idosoId: widget.user.linkedIdosoId!,
+                        token: widget.user.accessToken,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nenhum idoso vinculado ao seu perfil'),
+                    ),
+                  );
+                }
               },
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver Análise da Psicóloga'),
@@ -719,7 +921,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton.icon(
               onPressed: () {
-                // TODO: Navegar para gerenciar saúde
+                if (widget.user.linkedIdosoId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DashboardSaudeScreen(
+                        idosoId: widget.user.linkedIdosoId!,
+                        idosoNome: _linkedIdosoNome ?? 'Paciente',
+                        token: widget.user.accessToken,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nenhum idoso vinculado ao seu perfil'),
+                    ),
+                  );
+                }
               },
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('GERENCIAR SAÚDE'),

@@ -4,6 +4,9 @@ import 'screens/login_screen.dart';
 import 'constants/app_colors.dart';
 import 'services/notification_service.dart';
 
+/// Global navigator key for navigation from services
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -23,6 +26,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EVA Portal da Familia',
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
