@@ -34,7 +34,7 @@ class DashboardResumo {
 }
 
 class DashboardService {
-  static const String baseUrl = 'http://104.248.219.200:8000';
+  static const String baseUrl = 'https://eva-ia.org:8000';
 
   static Future<DashboardResumo?> getResumoDiario(
     String idosoId, {

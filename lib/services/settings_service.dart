@@ -52,7 +52,7 @@ class Usuario {
 }
 
 class SettingsService {
-  static const String _baseUrl = 'http://104.248.219.200:8000';
+  static const String _baseUrl = 'https://eva-ia.org:8000';
 
   /// Obtém perfil do usuário logado
   static Future<Usuario?> getProfile({String? token}) async {

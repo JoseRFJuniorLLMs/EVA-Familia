@@ -57,7 +57,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     // URL do WebRTC Client hospedado
     // role=family identifica que este é o lado do portal/familiar
     final url =
-        "http://104.248.219.200/webrtc-client.html?session_id=$sessionId&role=family";
+        "https://eva-ia.org/webrtc-client.html?session_id=$sessionId&role=family";
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)

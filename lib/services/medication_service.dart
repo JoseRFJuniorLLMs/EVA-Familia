@@ -19,7 +19,7 @@ class SafeCheckResult {
 }
 
 class MedicationService {
-  static const String _baseUrl = 'http://104.248.219.200:8000'; // IP VPS
+  static const String _baseUrl = 'https://eva-ia.org:8000'; // HTTPS
 
   /// Verifica se o medicamento é seguro para o idoso
   static Future<SafeCheckResult> checkSafety(

@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class VideoService {
   // URL do Backend (Ajustar conforme ambiente: localhost ou IP da VPS)
   static const String _baseUrl =
-      'http://104.248.219.200:8000'; // Exemplo IP VPS
+      'https://eva-ia.org:8000'; // HTTPS com domínio
 
   /// Inicia uma sessão de vídeo para um idoso específico
   /// Retorna o session_id se sucesso, ou null se falha.

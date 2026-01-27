@@ -84,7 +84,7 @@ class Insight {
 }
 
 class EmotionalService {
-  static const String _baseUrl = 'http://104.248.219.200:8000';
+  static const String _baseUrl = 'https://eva-ia.org:8000';
 
   static Future<EmotionalData?> getEmotionalData(
     String idosoId, {

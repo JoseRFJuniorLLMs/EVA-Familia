@@ -33,7 +33,7 @@ class Usuario {
 }
 
 class AuthService {
-  static const String _baseUrl = 'http://104.248.219.200:8000';
+  static const String _baseUrl = 'https://eva-ia.org:8000';
   static const String _tokenKey = 'auth_token';
   static const String _userKey =
       'user_data'; // Store minimal user data if needed

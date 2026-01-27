@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/idoso.dart';
 
 class IdosoService {
-  static const String _baseUrl = 'http://104.248.219.200:8000';
+  static const String _baseUrl = 'https://eva-ia.org:8000';
 
   /// Lista todos os idosos do usuário logado
   static Future<List<Idoso>> getIdosos({String? token}) async {

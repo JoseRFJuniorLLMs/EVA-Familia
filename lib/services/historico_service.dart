@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/historico_ligacao.dart';
 
 class HistoricoService {
-  static const String _baseUrl = 'http://104.248.219.200:8000';
+  static const String _baseUrl = 'https://eva-ia.org:8000';
 
   /// Lista todo o histórico de ligações
   static Future<List<HistoricoLigacao>> getHistorico({String? token}) async {
